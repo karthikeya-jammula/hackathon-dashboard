@@ -260,7 +260,8 @@ def build_model(data: pd.DataFrame):
     )
 
     model = MultiOutputRegressor(
-        XGBRegressor(n_estimators=300, learning_rate=0.05, max_depth=4, random_state=42)
+        XGBRegressor(n_estimators=100, learning_rate=0.08, max_depth=4,
+                     random_state=42, n_jobs=1, tree_method="hist")
     )
     model.fit(X_train, y_train)
 
@@ -275,12 +276,13 @@ def build_model(data: pd.DataFrame):
             "rmse": np.sqrt(mean_squared_error(y_test.iloc[:, i], preds[:, i])),
         }
 
-    # Cross-val for Dissolution_Rate
+    # Cross-val for Dissolution_Rate (lightweight)
     cv_scores = cross_val_score(
-        XGBRegressor(n_estimators=300, learning_rate=0.05, max_depth=4, random_state=42),
+        XGBRegressor(n_estimators=50, learning_rate=0.1, max_depth=4,
+                     random_state=42, n_jobs=1, tree_method="hist"),
         X,
         y["Dissolution_Rate"],
-        cv=5,
+        cv=3,
         scoring="r2",
     )
 
@@ -782,9 +784,9 @@ elif page == "Model Performance":
     fig_cv = go.Figure()
     fig_cv.add_trace(
         go.Bar(
-            x=[f"Fold {i+1}" for i in range(5)],
+            x=[f"Fold {i+1}" for i in range(len(art["cv_scores"]))],
             y=art["cv_scores"],
-            marker_color=COLORS["palette"][:5],
+            marker_color=COLORS["palette"][:len(art["cv_scores"])],
             text=[f"{s:.4f}" for s in art["cv_scores"]],
             textposition="outside",
         )
@@ -795,7 +797,7 @@ elif page == "Model Performance":
         line_color=COLORS["warning"],
         annotation_text=f"Mean: {art['cv_scores'].mean():.4f}",
     )
-    fig_cv.update_layout(**PLOTLY_LAYOUT, title="5-Fold Cross-Validation R\u00b2", height=350)
+    fig_cv.update_layout(**PLOTLY_LAYOUT, title=f"{len(art['cv_scores'])}-Fold Cross-Validation R\u00b2", height=350)
     st.plotly_chart(fig_cv, use_container_width=True)
 
 
